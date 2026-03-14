@@ -11,7 +11,8 @@ async function bootstrap() {
 
   const app = createApp();
   app.listen(config.port, () => {
-    console.log(`HTTP server listening on ${config.publicUrl}`);
+    console.log(`HTTP server listening on Port ${config.port}`);
+    console.log(`Public URL: ${config.publicUrl}`);
   });
 }
 

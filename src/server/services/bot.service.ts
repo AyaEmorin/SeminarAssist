@@ -3,7 +3,12 @@ import { config } from '../config.js';
 import { initShoukaku } from '../../lavalink/connection.js';
 
 export const botClient = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ]
 });
 
 let readyPromise: Promise<void> | null = null;

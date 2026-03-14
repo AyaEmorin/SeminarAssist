@@ -1,6 +1,7 @@
 import { EmbedBuilder, Events, Interaction, GuildMember } from 'discord.js';
 import { botClient } from '../../services/bot.service.js';
 import { getQueue, handlePlay, handleSkip, handleStop, handleJoin, handleLeave } from '../../services/music.service.js';
+import { playYouTube } from '../../services/distube.service.js';
 
 export function registerMusicInteractions() {
 
@@ -54,6 +55,35 @@ export function registerMusicInteractions() {
             { name: 'เพลง', value: `[${result.queued.title}](${result.queued.uri})`, inline: false },
             { name: 'ขอโดย', value: result.queued.requestedBy, inline: true }
           );
+
+        await interaction.editReply({ embeds: [embed] });
+
+        return;
+
+      }
+
+      if (interaction.commandName === 'playtube') {
+
+        const query = interaction.options.getString('query', true);
+
+        await interaction.deferReply();
+
+        const result = await playYouTube(member, query, interaction.channel! as any);
+
+        const statusTitle = result.isPlayingNow
+          ? '🎶 กำลังเล่น (YouTube)'
+          : `🎵 เพิ่มเข้าคิวแล้ว (อันดับที่ ${result.position})`;
+
+        const embed = new EmbedBuilder()
+          .setColor(0xff0000)
+          .setTitle(statusTitle)
+          .setDescription(`[${result.track.title}](${result.track.url})`)
+          .addFields(
+            { name: 'ความยาว', value: result.track.duration, inline: true },
+            { name: 'ขอโดย', value: result.track.requestedBy, inline: true }
+          );
+
+        if (result.track.thumbnail) embed.setThumbnail(result.track.thumbnail);
 
         await interaction.editReply({ embeds: [embed] });
 

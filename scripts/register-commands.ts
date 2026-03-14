@@ -10,9 +10,15 @@ const commands = [
   new SlashCommandBuilder().setName('leave').setDescription('ออกจากห้องเสียงและล้างคิวเพลงทั้งหมด'),
   new SlashCommandBuilder()
     .setName('play')
-    .setDescription('เล่นเพลงจาก URL หรือคำค้นหา')
+    .setDescription('เล่นเพลงจาก URL หรือคำค้นหา (Lavalink)')
     .addStringOption((option) =>
       option.setName('query').setDescription('URL หรือคำค้นหาเพลง').setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('playtube')
+    .setDescription('เล่นเพลงจาก YouTube (DisTube)')
+    .addStringOption((option) =>
+      option.setName('query').setDescription('URL หรือคำค้นหาเพลง YouTube').setRequired(true)
     ),
   new SlashCommandBuilder().setName('skip').setDescription('ข้ามเพลงปัจจุบัน'),
   new SlashCommandBuilder().setName('stop').setDescription('หยุดเพลงและล้างคิว'),
