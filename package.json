@@ -1,0 +1,49 @@
+{
+  "name": "discord-suite-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "tsx watch src/server/index.ts",
+    "dev:web": "vite",
+    "build": "npm run build:web && npm run build:server",
+    "build:web": "vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "start": "node dist/server/index.js",
+    "register:commands": "tsx scripts/register-commands.ts"
+  },
+  "dependencies": {
+    "@discordjs/voice": "^0.19.0",
+    "@distube/ytdl-core": "^4.16.12",
+    "@supabase/supabase-js": "^2.99.1",
+    "discord.js": "^14.24.0",
+    "dotenv": "^17.2.2",
+    "express": "^4.21.2",
+    "ffmpeg-static": "^5.2.0",
+    "libsodium-wrappers": "^0.8.2",
+    "opusscript": "^0.0.8",
+    "play-dl": "^1.9.7",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "shoukaku": "^4.3.0",
+    "tweetnacl": "^1.0.3",
+    "youtubei.js": "^16.0.1",
+    "yt-search": "^2.13.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@types/yt-search": "^2.10.3",
+    "@vitejs/plugin-react": "^5.0.2",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.5"
+  }
+}
