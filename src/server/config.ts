@@ -19,7 +19,7 @@ function list(name: string): string[] {
 
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
-  port: Number(process.env.PORT ?? 3000),
+  port: Number(process.env.PORT ?? 3001),
   appBaseUrl: required('APP_BASE_URL'),
   publicUrl: required('PUBLIC_URL'),
   supabaseUrl: required('VITE_SUPABASE_URL'),
@@ -30,7 +30,7 @@ export const config = {
   autoRoleId: required('AUTO_ROLE_ID'),
   allowedRoleIds: list('ALLOWED_ROLE_IDS'),
   allowedUserIds: list('ALLOWED_USER_IDS'),
-  musicDefaultVolume: Number(process.env.MUSIC_DEFAULT_VOLUME ?? 0.05),
+  musicDefaultVolume: Number(process.env.MUSIC_DEFAULT_VOLUME ?? 0.07),
   lavalinkHost: process.env.LAVALINK_HOST?.trim() ?? 'localhost',
   lavalinkPort: Number(process.env.LAVALINK_PORT ?? 2333),
   lavalinkPassword: process.env.LAVALINK_PASSWORD?.trim() ?? 'youshallnotpass',
