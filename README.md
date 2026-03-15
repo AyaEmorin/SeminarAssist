@@ -1,4 +1,4 @@
-# Discord Suite Bot
+# Discord SeminarAssist Bot
 
 > ครบเครื่องเรื่อง Discord — ระบบเพลง, Web Dashboard ส่งประกาศ Embed, ลงทะเบียนนักศึกษา และอื่นๆ
 
