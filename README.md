@@ -216,5 +216,5 @@ discord-suite-bot/
 ---
 
 <div align="center">
-พัฒนาด้วย ❤️ โดยทีมพัฒนา Discord Suite
+พัฒนาด้วย ❤️ โดย Nerissa Ravencroft Lover
 </div>
