@@ -7,6 +7,7 @@ export type AnnouncementPayload = {
   channelId: string;
   title: string;
   description: string;
+  content?: string;
   color?: string;
   imageUrl?: string;
   thumbnailUrl?: string;
@@ -14,6 +15,8 @@ export type AnnouncementPayload = {
 };
 
 export async function sendAnnouncement(payload: AnnouncementPayload) {
+  console.log('[EmbedService] Sending announcement:', JSON.stringify(payload, null, 2));
+
   const guild = await botClient.guilds.fetch(config.discordGuildId);
   const channel = await guild.channels.fetch(payload.channelId);
 
@@ -32,5 +35,11 @@ export async function sendAnnouncement(payload: AnnouncementPayload) {
   if (payload.thumbnailUrl) embed.setThumbnail(payload.thumbnailUrl.trim());
   if (payload.footer) embed.setFooter({ text: payload.footer.trim() });
 
-  await (channel as TextChannel).send({ embeds: [embed] });
+  const messageOptions: { content?: string; embeds: EmbedBuilder[] } = { embeds: [embed] };
+  if (payload.content?.trim()) {
+    messageOptions.content = payload.content.trim();
+  }
+
+  await (channel as TextChannel).send(messageOptions);
+  console.log('[EmbedService] Announcement sent successfully to channel:', channel.name);
 }

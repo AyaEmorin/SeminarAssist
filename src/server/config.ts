@@ -5,7 +5,8 @@ dotenv.config();
 function required(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
-    throw new Error(`Missing required env: ${name}`);
+    console.error(`[Config] ❌ Missing required env: ${name}`);
+    return '';
   }
   return value;
 }
@@ -16,6 +17,8 @@ function list(name: string): string[] {
     .map((item) => item.trim())
     .filter(Boolean);
 }
+
+console.log('[Config] Loading configuration...');
 
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -35,3 +38,5 @@ export const config = {
   lavalinkPort: Number(process.env.LAVALINK_PORT ?? 2333),
   lavalinkPassword: process.env.LAVALINK_PASSWORD?.trim() ?? 'youshallnotpass',
 };
+
+console.log('[Config] Configuration loaded.');
