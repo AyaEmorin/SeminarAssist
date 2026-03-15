@@ -1,4 +1,4 @@
-import { GuildMember, EmbedBuilder, type GuildTextBasedChannel } from 'discord.js';
+import { GuildMember, EmbedBuilder, type GuildTextBasedChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle, Message } from 'discord.js';
 import {
   joinVoiceChannel,
   createAudioPlayer,
@@ -23,7 +23,10 @@ interface GuildYtQueue {
   connection: VoiceConnection;
   textChannel: GuildTextBasedChannel;
   tracks: YtTrack[];
+  previousTracks: YtTrack[];
   current: YtTrack | null;
+  volume: number;
+  nowPlayingMessage: Message | null;
 }
 
 interface YtTrack {
@@ -46,7 +49,7 @@ async function searchYt(query: string): Promise<YtTrack | null> {
     // If not a URL, prepend ytsearch:
     const searchQuery = query.match(/^https?:\/\//) ? query : `ytsearch:${query}`;
 
-    const result = await youtubeDl(searchQuery, {
+    const result = await (youtubeDl as any)(searchQuery, {
       dumpSingleJson: true,
       quiet: true,
       defaultSearch: 'ytsearch',
@@ -85,27 +88,30 @@ async function searchYt(query: string): Promise<YtTrack | null> {
 // Mirrors Python's discord.FFmpegPCMAudio(url, **FFMPEG_OPTS)
 // -----------------------------------------------------------
 function createFFmpegStream(audioUrl: string): Readable {
-  const ffmpeg = spawn(ffmpegPath || 'ffmpeg', [
+  const ffmpeg = spawn((ffmpegPath as unknown as string) || 'ffmpeg', [
     '-reconnect', '1',
     '-reconnect_streamed', '1',
     '-reconnect_delay_max', '5',
     '-i', audioUrl,
     '-vn',
-    '-filter:a', 'volume=0.05',
     '-acodec', 'libopus',
     '-f', 'opus',
     '-ar', '48000',
     '-ac', '2',
     'pipe:1',
   ], {
-    stdio: ['ignore', 'pipe', 'ignore'],
-  });
+    stdio: ['ignore', 'pipe', 'ignore'] as const,
+  }) as any;
 
-  ffmpeg.on('error', (err) => {
+  ffmpeg.on('error', (err: Error) => {
     console.error('[YT Music] FFmpeg error:', err);
   });
 
-  return ffmpeg.stdout;
+  if (!ffmpeg.stdout) {
+    throw new Error('Failed to open FFmpeg stdout');
+  }
+
+  return ffmpeg.stdout as unknown as Readable;
 }
 
 // -----------------------------------------------------------
@@ -115,8 +121,18 @@ async function playNext(guildId: string): Promise<void> {
   const queue = queues.get(guildId);
   if (!queue) return;
 
-  const track = queue.tracks.shift() || null;
+  // Move current track to previous if it finished naturally before fetching next
+  if (queue.current) {
+    queue.previousTracks.push(queue.current);
+  }
+
+  const track = queue.tracks.shift() ?? null;
   queue.current = track;
+
+  // Cleanup old message to avoid spam
+  if (queue.nowPlayingMessage) {
+    await queue.nowPlayingMessage.delete().catch(() => {}).finally(() => queue.nowPlayingMessage = null);
+  }
 
   if (!track) {
     console.log(`[YT Music] Queue empty for ${guildId}`);
@@ -129,26 +145,45 @@ async function playNext(guildId: string): Promise<void> {
     const ffmpegStream = createFFmpegStream(track.url);
     const resource = createAudioResource(ffmpegStream, {
       inputType: StreamType.OggOpus,
+      inlineVolume: true,
     });
+    
+    // Convert 0.0 - 1.0 to logarithmic scale for better precision
+    resource.volume?.setVolumeLogarithmic(queue.volume);
 
     queue.player.play(resource);
 
     // Send "Now Playing" embed
     const embed = new EmbedBuilder()
-      .setColor('#ff4757')
-      .setAuthor({ name: '🎶 กำลังเล่น' })
+      .setColor('#FFB3BA') // Pastel Pink
+      .setAuthor({ name: '✨ กำลังเล่น ✨' })
       .setTitle(track.title)
       .setURL(track.pageUrl)
       .addFields(
         { name: '⏱️ ความยาว', value: track.duration, inline: true },
         { name: '👤 ขอโดย', value: track.requestedBy, inline: true },
       )
-      .setFooter({ text: 'YouTube Music' })
+      .setFooter({ text: '🌸 YouTube Music Player' })
       .setTimestamp();
 
-    if (track.thumbnail) embed.setThumbnail(track.thumbnail);
+    if (track.thumbnail) {
+      embed.setImage(track.thumbnail); // Make it a large image instead of small thumbnail
+    }
 
-    await queue.textChannel.send({ embeds: [embed] }).catch(console.error);
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId('music_prev').setEmoji('⏮️').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('music_pause').setEmoji('⏯️').setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId('music_next').setEmoji('⏭️').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('music_voldown').setEmoji('🔉').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('music_volup').setEmoji('🔊').setStyle(ButtonStyle.Success),
+    );
+
+    const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId('music_queue').setLabel('ดูคิวเพลง (Queue)').setEmoji('📋').setStyle(ButtonStyle.Secondary)
+    );
+
+    const msg = await queue.textChannel.send({ embeds: [embed], components: [row, row2] }).catch(console.error);
+    if (msg) queue.nowPlayingMessage = msg as Message;
   } catch (err) {
     console.error(`[YT Music] Error streaming: ${track.title}`, err);
     await queue.textChannel
@@ -193,7 +228,10 @@ export async function playYouTube(
       connection,
       textChannel,
       tracks: [],
+      previousTracks: [],
       current: null,
+      volume: 0.2, // Default 20%
+      nowPlayingMessage: null
     };
     queues.set(voiceChannel.guild.id, queue);
 
@@ -246,7 +284,9 @@ export function stopYouTube(guildId: string): boolean {
   const queue = queues.get(guildId);
   if (!queue) return false;
   queue.tracks = [];
+  queue.previousTracks = [];
   queue.current = null;
+  if (queue.nowPlayingMessage) queue.nowPlayingMessage.delete().catch(()=>{});
   queue.player.stop(true);
   return true;
 }
@@ -256,11 +296,59 @@ export function leaveYouTube(guildId: string): boolean {
   const queue = queues.get(guildId);
   if (!queue) return false;
   queue.tracks = [];
+  queue.previousTracks = [];
   queue.current = null;
+  if (queue.nowPlayingMessage) queue.nowPlayingMessage.delete().catch(()=>{});
   queue.player.stop(true);
   queue.connection.destroy();
   queues.delete(guildId);
   return true;
+}
+
+// pause / unpause
+export function togglePauseYouTube(guildId: string): boolean | null {
+  const queue = queues.get(guildId);
+  if (!queue || !queue.current) return null;
+  if (queue.player.state.status === AudioPlayerStatus.Paused) {
+    queue.player.unpause();
+    return false; // isPaused = false
+  } else {
+    queue.player.pause();
+    return true; // isPaused = true
+  }
+}
+
+// prev track
+export function previousYouTube(guildId: string): boolean {
+  const queue = queues.get(guildId);
+  if (!queue || queue.previousTracks.length === 0) return false;
+  
+  const prev = queue.previousTracks.pop()!;
+  
+  // Re-enqueue current and prev to the front so they play next
+  if (queue.current) {
+    queue.tracks.unshift(queue.current);
+  }
+  queue.tracks.unshift(prev);
+  queue.current = null; // prevents pushing to history twice
+  
+  queue.player.stop(true); // triggers idle -> playNext(), which picks up `prev`
+  return true;
+}
+
+// volume control
+export function changeVolumeYouTube(guildId: string, diff: number): number {
+  const queue = queues.get(guildId);
+  if (!queue) return -1;
+  queue.volume = Math.max(0.01, Math.min(2.0, queue.volume + diff)); // bound 1% - 200%
+  if (queue.player.state.status !== AudioPlayerStatus.Idle) {
+    // Re-apply if actively playing
+    const resource = (queue.player.state as any).resource;
+    if (resource && resource.volume) {
+      resource.volume.setVolumeLogarithmic(queue.volume);
+    }
+  }
+  return queue.volume;
 }
 
 export function getYouTubeQueue(guildId: string) {
