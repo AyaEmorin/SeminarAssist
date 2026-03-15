@@ -30,7 +30,7 @@ export const config = {
   autoRoleId: required('AUTO_ROLE_ID'),
   allowedRoleIds: list('ALLOWED_ROLE_IDS'),
   allowedUserIds: list('ALLOWED_USER_IDS'),
-  musicDefaultVolume: Number(process.env.MUSIC_DEFAULT_VOLUME ?? 0.07),
+  musicDefaultVolume: Number(process.env.MUSIC_DEFAULT_VOLUME ?? 0.2),
   lavalinkHost: process.env.LAVALINK_HOST?.trim() ?? 'localhost',
   lavalinkPort: Number(process.env.LAVALINK_PORT ?? 2333),
   lavalinkPassword: process.env.LAVALINK_PASSWORD?.trim() ?? 'youshallnotpass',

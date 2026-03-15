@@ -1,7 +1,6 @@
 import { EmbedBuilder, Events, Interaction, GuildMember } from 'discord.js';
 import { botClient } from '../../services/bot.service.js';
-import { getQueue, handlePlay, handleSkip, handleStop, handleJoin, handleLeave } from '../../services/music.service.js';
-import { playYouTube } from '../../services/distube.service.js';
+import { playYouTube, skipYouTube, stopYouTube, leaveYouTube, getYouTubeQueue } from '../../services/distube.service.js';
 
 export function registerMusicInteractions() {
 
@@ -18,51 +17,21 @@ export function registerMusicInteractions() {
       const member = interaction.member as GuildMember;
 
       if (interaction.commandName === 'join') {
-
-        await interaction.deferReply();
-
-        await handleJoin(member);
-
-        await interaction.editReply('เข้ามาในห้องเสียงแล้วพร้อมลุย!');
-
+        await interaction.reply('ใช้คำสั่ง /play เพื่อให้บอทเข้ามาเล่นเพลงในห้องเสียงได้เลยครับ!');
         return;
-
       }
 
       if (interaction.commandName === 'leave') {
-
-        await handleLeave(interaction.guildId);
-
-        await interaction.reply('ออกจากห้องเสียงและล้างคิวเรียบร้อยแล้ว 👋');
-
-        return;
-
-      }
-
-      if (interaction.commandName === 'play') {
-
-        const query = interaction.options.getString('query', true);
-
-        await interaction.deferReply();
-
-        const result = await handlePlay(member, query, interaction.user.tag);
-
-        const statusTitle = result.isPlayingNow ? '🎶 กำลังเล่น' : `🎵 เพิ่มเข้าคิวแล้ว (อันดับที่ ${result.position})`;
+        leaveYouTube(interaction.guildId);
         const embed = new EmbedBuilder()
-          .setColor(0x5865f2)
-          .setTitle(statusTitle)
-          .addFields(
-            { name: 'เพลง', value: `[${result.queued.title}](${result.queued.uri})`, inline: false },
-            { name: 'ขอโดย', value: result.queued.requestedBy, inline: true }
-          );
-
-        await interaction.editReply({ embeds: [embed] });
-
+          .setColor('#ff4757')
+          .setDescription('🛑 **ออกจากห้องเสียงและล้างคิวเรียบร้อยแล้ว 👋**');
+        await interaction.reply({ embeds: [embed] });
         return;
-
       }
 
-      if (interaction.commandName === 'playtube') {
+      // /play — yt-dlp powered
+      if (interaction.commandName === 'play') {
 
         const query = interaction.options.getString('query', true);
 
@@ -70,86 +39,97 @@ export function registerMusicInteractions() {
 
         const result = await playYouTube(member, query, interaction.channel! as any);
 
-        const statusTitle = result.isPlayingNow
-          ? '🎶 กำลังเล่น (YouTube)'
-          : `🎵 เพิ่มเข้าคิวแล้ว (อันดับที่ ${result.position})`;
+        if (result.isPlayingNow) {
+          // If playing immediately, distube.service.ts will send the "Now Playing" embed.
+          // We just delete our deferred reply to avoid duplicate messages.
+          await interaction.deleteReply();
+        } else {
+          // If added to queue, we send the "Added to Queue" embed.
+          const embed = new EmbedBuilder()
+            .setColor('#2ed573')
+            .setAuthor({ name: `📋 เพิ่มเข้าคิวแล้ว (อันดับที่ ${result.position})` })
+            .setTitle(result.track.title)
+            .setURL(result.track.pageUrl)
+            .addFields(
+              { name: '⏱️ ความยาว', value: result.track.duration, inline: true },
+              { name: '👤 ขอโดย', value: result.track.requestedBy, inline: true }
+            );
 
-        const embed = new EmbedBuilder()
-          .setColor(0xff0000)
-          .setTitle(statusTitle)
-          .setDescription(`[${result.track.title}](${result.track.url})`)
-          .addFields(
-            { name: 'ความยาว', value: result.track.duration, inline: true },
-            { name: 'ขอโดย', value: result.track.requestedBy, inline: true }
-          );
+          if (result.track.thumbnail) embed.setThumbnail(result.track.thumbnail);
 
-        if (result.track.thumbnail) embed.setThumbnail(result.track.thumbnail);
-
-        await interaction.editReply({ embeds: [embed] });
+          await interaction.editReply({ embeds: [embed] });
+        }
 
         return;
 
       }
 
       if (interaction.commandName === 'skip') {
-
-        await handleSkip(interaction.guildId);
-
-        await interaction.reply('ข้ามเพลงแล้ว');
-
+        const skipped = skipYouTube(interaction.guildId);
+        if (!skipped) {
+          await interaction.reply({ content: '❌ ไม่มีเพลงที่กำลังเล่นอยู่ครับ', ephemeral: true });
+        } else {
+          const embed = new EmbedBuilder()
+            .setColor('#ffa502')
+            .setDescription('⏭️ **ข้ามเพลงเรียบร้อยแล้ว!**');
+          await interaction.reply({ embeds: [embed] });
+        }
         return;
-
       }
 
       if (interaction.commandName === 'stop') {
-
-        await handleStop(interaction.guildId);
-
-        await interaction.reply('หยุดเพลงและล้างคิวแล้ว');
-
+        stopYouTube(interaction.guildId);
+        const embed = new EmbedBuilder()
+          .setColor('#ff4757')
+          .setDescription('🛑 **หยุดเพลงและล้างคิวเรียบร้อยแล้ว**');
+        await interaction.reply({ embeds: [embed] });
         return;
-
       }
 
       if (interaction.commandName === 'queue') {
 
-        const queue = getQueue(interaction.guildId);
+        const queue = getYouTubeQueue(interaction.guildId);
 
         const embed = new EmbedBuilder()
-          .setColor(0x5865f2)
-          .setTitle('🎵 คิวเพลง');
+          .setColor('#1e90ff')
+          .setAuthor({ name: '📋 รายการคิวเพลงทั้งหมด' });
 
         if (!queue || !queue.current) {
 
-          embed.setDescription('ตอนนี้ยังไม่มีเพลงที่กำลังเล่นอยู่');
+          embed.setDescription('📭 ตอนนี้ยังไม่มีเพลงในคิวเลยครับ');
 
         } else {
 
           embed.addFields({
-            name: 'กำลังเล่น',
-            value: `${queue.current.title} — ${queue.current.requestedBy}`
+            name: '🎶 กำลังเล่น',
+            value: `**[${queue.current.title}](${queue.current.pageUrl})**\n👤 ขอโดย: ${queue.current.requestedBy}`
           });
-
-          let queueText = 'ไม่มี';
 
           if (queue.tracks.length > 0) {
 
             const lines = queue.tracks
-              .slice(0, 15)
-              .map((track, index) => `${index + 1}. ${track.title}`);
+              .slice(0, 10)
+              .map((track, index) => `**${index + 1}.** [${track.title}](${track.pageUrl}) | ⏱️ ${track.duration}`);
 
-            queueText = lines.join('\n');
+            let queueText = lines.join('\n');
 
-            if (queueText.length > 1024) {
-              queueText = queueText.slice(0, 1020) + '...';
+            if (queue.tracks.length > 10) {
+              queueText += `\n\n*...และอีก ${queue.tracks.length - 10} เพลงในคิว*`;
             }
 
-          }
+            embed.addFields({
+              name: `🎧 คิวถัดไป (${queue.tracks.length})`,
+              value: queueText
+            });
 
-          embed.addFields({
-            name: 'เพลงถัดไป',
-            value: queueText
-          });
+          } else {
+            embed.addFields({
+              name: '🎧 คิวถัดไป',
+              value: 'ไม่มีเพลงในคิวเพิ่มเติม'
+            });
+          }
+          
+          embed.setFooter({ text: `จำนวนเพลงทั้งหมด: ${queue.tracks.length + 1} เพลง` });
 
         }
 

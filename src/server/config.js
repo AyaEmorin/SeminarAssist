@@ -1,6 +1,6 @@
 export const config = {
 
-    musicDefaultVolume: 0.4,
+    musicDefaultVolume: 0.2,
 
     music: {
         maxQueueSize: 100,

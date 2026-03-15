@@ -3,10 +3,12 @@ import { config } from './config.js';
 import { startBot } from './services/bot.service.js';
 import { registerRegistrationInteractions } from './bot/interactions/registration.interaction.js';
 import { registerMusicInteractions } from './bot/interactions/music.interaction.js';
+import { registerCleanInteraction } from './bot/interactions/clean.interaction.js';
 
 async function bootstrap() {
   registerRegistrationInteractions();
   registerMusicInteractions();
+  registerCleanInteraction();
   await startBot();
 
   const app = createApp();

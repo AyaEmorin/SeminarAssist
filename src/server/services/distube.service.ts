@@ -48,6 +48,9 @@ async function searchYt(query: string): Promise<YtTrack | null> {
 
     const result = await youtubeDl(searchQuery, {
       dumpSingleJson: true,
+      quiet: true,
+      defaultSearch: 'ytsearch',
+      sourceAddress: '0.0.0.0',
       noDownload: true,
       noCheckCertificates: true,
       preferFreeFormats: true,
@@ -88,6 +91,7 @@ function createFFmpegStream(audioUrl: string): Readable {
     '-reconnect_delay_max', '5',
     '-i', audioUrl,
     '-vn',
+    '-filter:a', 'volume=0.05',
     '-acodec', 'libopus',
     '-f', 'opus',
     '-ar', '48000',
@@ -131,13 +135,17 @@ async function playNext(guildId: string): Promise<void> {
 
     // Send "Now Playing" embed
     const embed = new EmbedBuilder()
-      .setColor(0xff0000)
-      .setTitle('🎶 กำลังเล่น (YouTube)')
-      .setDescription(`[${track.title}](${track.pageUrl})`)
+      .setColor('#ff4757')
+      .setAuthor({ name: '🎶 กำลังเล่น' })
+      .setTitle(track.title)
+      .setURL(track.pageUrl)
       .addFields(
-        { name: 'ความยาว', value: track.duration, inline: true },
-        { name: 'ขอโดย', value: track.requestedBy, inline: true },
-      );
+        { name: '⏱️ ความยาว', value: track.duration, inline: true },
+        { name: '👤 ขอโดย', value: track.requestedBy, inline: true },
+      )
+      .setFooter({ text: 'YouTube Music' })
+      .setTimestamp();
+
     if (track.thumbnail) embed.setThumbnail(track.thumbnail);
 
     await queue.textChannel.send({ embeds: [embed] }).catch(console.error);
@@ -235,6 +243,16 @@ export function skipYouTube(guildId: string): boolean {
 
 // stop — equivalent to Python's stop()
 export function stopYouTube(guildId: string): boolean {
+  const queue = queues.get(guildId);
+  if (!queue) return false;
+  queue.tracks = [];
+  queue.current = null;
+  queue.player.stop(true);
+  return true;
+}
+
+// leave — disconnect from voice channel
+export function leaveYouTube(guildId: string): boolean {
   const queue = queues.get(guildId);
   if (!queue) return false;
   queue.tracks = [];

@@ -10,19 +10,25 @@ const commands = [
   new SlashCommandBuilder().setName('leave').setDescription('ออกจากห้องเสียงและล้างคิวเพลงทั้งหมด'),
   new SlashCommandBuilder()
     .setName('play')
-    .setDescription('เล่นเพลงจาก URL หรือคำค้นหา (Lavalink)')
+    .setDescription('เล่นเพลงจาก YouTube — URL หรือคำค้นหา')
     .addStringOption((option) =>
       option.setName('query').setDescription('URL หรือคำค้นหาเพลง').setRequired(true)
     ),
-  new SlashCommandBuilder()
-    .setName('playtube')
-    .setDescription('เล่นเพลงจาก YouTube (DisTube)')
-    .addStringOption((option) =>
-      option.setName('query').setDescription('URL หรือคำค้นหาเพลง YouTube').setRequired(true)
-    ),
   new SlashCommandBuilder().setName('skip').setDescription('ข้ามเพลงปัจจุบัน'),
   new SlashCommandBuilder().setName('stop').setDescription('หยุดเพลงและล้างคิว'),
-  new SlashCommandBuilder().setName('queue').setDescription('แสดงรายการคิวเพลง')
+  new SlashCommandBuilder().setName('queue').setDescription('แสดงรายการคิวเพลง'),
+  new SlashCommandBuilder()
+    .setName('clean')
+    .setDescription('ล้างประวัติแชททั้งหมดในห้อง')
+    .addStringOption((option) =>
+      option.setName('password').setDescription('รหัสผ่านสำหรับยืนยันการล้างแชท').setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('cleanself')
+    .setDescription('ล้างเฉพาะข้อความที่ส่งโดยบอทในห้องนี้')
+    .addStringOption((option) =>
+      option.setName('password').setDescription('รหัสผ่านสำหรับยืนยันการล้างแชท').setRequired(true)
+    ),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(config.discordBotToken);
