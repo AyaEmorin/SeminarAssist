@@ -84,7 +84,7 @@ export function registerRegistrationInteractions() {
 
                     const studentIdInput = new TextInputBuilder()
                         .setCustomId('student_id')
-                        .setLabel('เลขนักศึกษา (ถ้าไม่ใช้นักศึกษาปล่อยว่างไว้ได้)')
+                        .setLabel('เลขนักศึกษา (ถ้าไม่มีปล่อยว่างไว้ได้)')
                         .setStyle(TextInputStyle.Short)
                         .setRequired(false)
                         .setPlaceholder('เช่น 6612345678')
@@ -108,7 +108,7 @@ export function registerRegistrationInteractions() {
 
                     if (studentId && !/^\d+$/.test(studentId)) {
                         await interaction.reply({
-                            content: 'เลขนักศึกษาต้องเป็นตัวเลขเท่านั้น (ถ้าไม่ใช้นักศึกษาปล่อยว่างไว้ได้)',
+                            content: 'เลขนักศึกษาต้องเป็นตัวเลขเท่านั้น (ถ้าไม่มีปล่อยว่างไว้ได้)',
                             ephemeral: true
                         });
                         return;
